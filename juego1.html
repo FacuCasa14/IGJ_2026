@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Actividad interactiva para reconocer las distorsiones de la proyección de Mercator mediante TrueSize.net.">
+  <title>La trampa de Mercator · IIFA 2026</title>
+  <link rel="preconnect" href="https://truesize.net">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b2630'/%3E%3Ccircle cx='32' cy='32' r='21' fill='none' stroke='%23e3b94f' stroke-width='4'/%3E%3Cpath d='M11 32h42M32 11c8 7 8 35 0 42M32 11c-8 7-8 35 0 42M16 21h32M16 43h32' fill='none' stroke='%23e8f3f5' stroke-width='2'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --navy-950:#071a22;
+      --navy-900:#0b2630;
+      --navy-800:#123b48;
+      --navy-700:#1a5060;
+      --gold:#e3b94f;
+      --gold-soft:#f6e8b5;
+      --ice:#eaf3f5;
+      --paper:#f7f9f9;
+      --white:#ffffff;
+      --ink:#17313a;
+      --muted:#61767e;
+      --line:#d6e0e3;
+      --ok:#177857;
+      --bad:#b44141;
+      --shadow:0 14px 38px rgba(7,26,34,.12);
+      --radius:16px;
+    }
+    * { box-sizing:border-box; }
+    html { min-height:100%; background:var(--paper); }
+    body {
+      margin:0;
+      min-height:100vh;
+      color:var(--ink);
+      background:
+        radial-gradient(circle at 8% 4%, rgba(227,185,79,.16), transparent 24rem),
+        linear-gradient(180deg,#edf3f4 0,#f8fafa 16rem);
+      font-family:Arial,Helvetica,sans-serif;
+      font-size:16px;
+    }
+    button,input,a { font:inherit; }
+    button { cursor:pointer; }
+    .topbar {
+      min-height:72px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:20px;
+      padding:12px clamp(18px,3vw,44px);
+      color:var(--white);
+      background:linear-gradient(105deg,var(--navy-950),var(--navy-800));
+      border-bottom:3px solid var(--gold);
+    }
+    .brand { display:flex; align-items:center; gap:14px; min-width:0; }
+    .brand-mark {
+      width:44px; height:44px; flex:0 0 auto;
+      display:grid; place-items:center;
+      border:1px solid rgba(255,255,255,.26);
+      border-radius:12px;
+      background:rgba(255,255,255,.06);
+    }
+    .brand-mark svg { width:30px; height:30px; }
+    .brand h1 { margin:0; font-size:clamp(1.2rem,2.2vw,1.75rem); line-height:1.05; letter-spacing:.01em; }
+    .brand p { margin:5px 0 0; color:#c9d8dc; font-size:.82rem; letter-spacing:.06em; text-transform:uppercase; }
+    .header-progress { width:min(290px,28vw); min-width:190px; }
+    .progress-line { display:flex; justify-content:space-between; gap:10px; margin-bottom:7px; color:#dae5e7; font-size:.86rem; }
+    .progress-track { height:8px; overflow:hidden; border-radius:999px; background:rgba(255,255,255,.16); }
+    .progress-fill { width:0; height:100%; border-radius:inherit; background:var(--gold); transition:width .25s ease; }
+    .workspace {
+      width:min(1800px,100%);
+      min-height:calc(100vh - 72px);
+      margin:0 auto;
+      padding:18px clamp(14px,2.2vw,30px) 26px;
+      display:grid;
+      grid-template-columns:minmax(0,1.72fr) minmax(360px,.78fr);
+      gap:18px;
+    }
+    .map-panel,.activity-panel {
+      min-width:0;
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:var(--white);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .map-panel { display:flex; flex-direction:column; min-height:760px; }
+    .panel-toolbar {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      min-height:58px;
+      padding:10px 14px 10px 18px;
+      border-bottom:1px solid var(--line);
+      background:#fbfcfc;
+    }
+    .panel-toolbar h2 { margin:0; font-size:1rem; color:var(--navy-900); }
+    .panel-toolbar p { margin:3px 0 0; color:var(--muted); font-size:.82rem; }
+    .external-link {
+      display:inline-flex; align-items:center; gap:7px; flex:0 0 auto;
+      min-height:38px; padding:8px 12px;
+      color:var(--navy-900); text-decoration:none; font-weight:700; font-size:.86rem;
+      border:1px solid #b9cbd0; border-radius:9px; background:var(--white);
+    }
+    .external-link:hover,.external-link:focus-visible { border-color:var(--gold); outline:none; box-shadow:0 0 0 3px rgba(227,185,79,.2); }
+    .map-wrap { position:relative; flex:1; min-height:700px; background:#dce7e9; }
+    .map-wrap iframe { display:block; width:100%; height:100%; min-height:700px; border:0; background:var(--white); }
+    .frame-help {
+      position:absolute; left:14px; bottom:14px; z-index:2;
+      max-width:420px; padding:9px 12px;
+      color:#e6f1f3; background:rgba(7,26,34,.88);
+      border:1px solid rgba(255,255,255,.18); border-radius:10px;
+      font-size:.78rem; line-height:1.4;
+      backdrop-filter:blur(8px);
+    }
+    .frame-help a { color:#ffe49a; font-weight:700; }
+    .activity-panel { display:flex; flex-direction:column; min-height:760px; }
+    .activity-head { padding:18px 20px 14px; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#fff,#f8fbfb); }
+    .eyebrow { margin:0 0 7px; color:var(--navy-700); font-size:.78rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+    .activity-head h2 { margin:0; color:var(--navy-900); font-size:1.35rem; line-height:1.2; }
+    .activity-head p { margin:8px 0 0; color:var(--muted); font-size:.92rem; line-height:1.45; }
+    .student-field { display:grid; gap:6px; margin-top:14px; }
+    .student-field label { color:var(--navy-900); font-size:.82rem; font-weight:700; }
+    .student-field input {
+      width:100%; min-height:42px; padding:9px 11px;
+      color:var(--ink); border:1px solid #bfd0d4; border-radius:9px; background:var(--white);
+    }
+    .student-field input:focus { outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(227,185,79,.19); }
+    .challenge-shell { flex:1; display:flex; flex-direction:column; padding:18px 20px; }
+    .challenge-meta { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .challenge-number {
+      display:inline-flex; align-items:center; gap:9px;
+      color:var(--navy-800); font-size:.84rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase;
+    }
+    .number-badge { width:29px; height:29px; display:grid; place-items:center; border-radius:8px; color:var(--navy-950); background:var(--gold); }
+    .answer-state { color:var(--muted); font-size:.82rem; }
+    .action-box {
+      margin-bottom:16px; padding:13px 14px;
+      border-left:4px solid var(--gold); border-radius:0 10px 10px 0;
+      background:#f2f7f8; color:#29454e; line-height:1.45; font-size:.92rem;
+    }
+    .action-box strong { color:var(--navy-900); }
+    fieldset { min-width:0; margin:0; padding:0; border:0; }
+    legend { width:100%; margin-bottom:15px; color:var(--navy-900); font-size:1.08rem; font-weight:800; line-height:1.4; }
+    .options { display:grid; gap:10px; }
+    .option {
+      position:relative; display:flex; align-items:flex-start; gap:11px;
+      padding:12px 13px; border:1px solid var(--line); border-radius:11px;
+      background:var(--white); transition:border-color .15s ease,background .15s ease,transform .15s ease;
+    }
+    .option:hover { border-color:#9fb8bf; background:#f9fbfb; transform:translateY(-1px); }
+    .option:has(input:checked) { border-color:var(--gold); background:#fffaf0; box-shadow:0 0 0 2px rgba(227,185,79,.17); }
+    .option input { width:19px; height:19px; margin:1px 0 0; accent-color:var(--navy-800); flex:0 0 auto; }
+    .option span { line-height:1.38; }
+    .nav-actions { margin-top:auto; padding-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .btn {
+      min-height:43px; padding:9px 14px; border-radius:9px; font-weight:800;
+      border:1px solid transparent;
+    }
+    .btn-secondary { color:var(--navy-900); border-color:#b9cbd0; background:var(--white); }
+    .btn-primary { color:var(--white); background:var(--navy-800); }
+    .btn-finish { color:var(--navy-950); background:var(--gold); }
+    .btn:hover:not(:disabled) { filter:brightness(.97); transform:translateY(-1px); }
+    .btn:focus-visible { outline:3px solid rgba(227,185,79,.45); outline-offset:2px; }
+    .btn:disabled { opacity:.42; cursor:not-allowed; transform:none; }
+    .dot-nav { display:flex; justify-content:center; flex-wrap:wrap; gap:7px; padding:15px 18px 18px; border-top:1px solid var(--line); }
+    .dot {
+      width:31px; height:31px; display:grid; place-items:center;
+      color:var(--muted); border:1px solid var(--line); border-radius:8px; background:var(--white);
+      font-size:.78rem; font-weight:800;
+    }
+    .dot.current { color:var(--white); border-color:var(--navy-800); background:var(--navy-800); }
+    .dot.answered:not(.current) { color:var(--navy-900); border-color:#d1ad4d; background:#fff7df; }
+    .results { display:none; flex:1; padding:20px; overflow:auto; }
+    .results.show { display:block; }
+    .challenge-shell.hide,.dot-nav.hide { display:none; }
+    .score-card { display:grid; grid-template-columns:90px 1fr; gap:16px; align-items:center; padding:18px; border-radius:14px; color:var(--white); background:linear-gradient(130deg,var(--navy-900),var(--navy-700)); }
+    .score-ring { width:88px; height:88px; display:grid; place-items:center; border:7px solid var(--gold); border-radius:50%; font-size:1.45rem; font-weight:900; }
+    .score-card h3 { margin:0 0 6px; font-size:1.25rem; }
+    .score-card p { margin:0; color:#d8e6e9; line-height:1.4; font-size:.9rem; }
+    .review-list { display:grid; gap:9px; margin:16px 0; }
+    .review-item { padding:11px 12px; border:1px solid var(--line); border-left-width:5px; border-radius:9px; background:#fbfcfc; }
+    .review-item.ok { border-left-color:var(--ok); }
+    .review-item.bad { border-left-color:var(--bad); }
+    .review-item b { display:block; margin-bottom:4px; color:var(--navy-900); font-size:.9rem; }
+    .review-item span { color:var(--muted); font-size:.82rem; line-height:1.35; }
+    .result-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    @media (max-width:1050px) {
+      .workspace { grid-template-columns:1fr; }
+      .map-panel,.activity-panel { min-height:0; }
+      .map-wrap,.map-wrap iframe { min-height:590px; height:66vh; }
+      .activity-panel { min-height:650px; }
+    }
+    @media (max-width:650px) {
+      .topbar { align-items:flex-start; padding:12px 15px; }
+      .header-progress { width:135px; min-width:120px; }
+      .progress-line span:first-child { display:none; }
+      .brand p { display:none; }
+      .workspace { padding:10px; gap:12px; }
+      .panel-toolbar { align-items:flex-start; }
+      .panel-toolbar p { display:none; }
+      .external-link { padding:8px 9px; font-size:.8rem; }
+      .map-wrap,.map-wrap iframe { min-height:520px; height:65vh; }
+      .frame-help { right:12px; max-width:none; }
+      .activity-head,.challenge-shell,.results { padding-left:15px; padding-right:15px; }
+      .result-actions { grid-template-columns:1fr; }
+    }
+    @media print {
+      body { background:white; }
+      .topbar,.map-panel,.nav-actions,.dot-nav,.result-actions { display:none!important; }
+      .workspace { display:block; padding:0; }
+      .activity-panel { border:0; box-shadow:none; }
+      .activity-head { border-bottom:2px solid var(--navy-900); }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 48 48" role="img">
+          <circle cx="24" cy="24" r="18" fill="none" stroke="#e3b94f" stroke-width="2.5"/>
+          <path d="M6 24h36M24 6c7 6 7 30 0 36M24 6c-7 6-7 30 0 36M10 15h28M10 33h28" fill="none" stroke="#edf7f8" stroke-width="1.7"/>
+        </svg>
+      </div>
+      <div>
+        <h1>La trampa de Mercator</h1>
+        <p>Lectura de Cartografía · IIFA 2026</p>
+      </div>
+    </div>
+    <div class="header-progress" aria-label="Progreso de la actividad">
+      <div class="progress-line"><span>Progreso</span><span id="progressText">0 de 10</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="map-panel" aria-labelledby="mapTitle">
+      <div class="panel-toolbar">
+        <div>
+          <h2 id="mapTitle">Laboratorio cartográfico · TrueSize.net</h2>
+          <p>Busque, arrastre, superponga y gire los territorios.</p>
+        </div>
+        <a class="external-link" href="https://truesize.net/" target="_blank" rel="noopener noreferrer" aria-label="Abrir TrueSize en una pestaña nueva">
+          Abrir aparte <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <div class="map-wrap">
+        <iframe src="https://truesize.net/" title="TrueSize.net, comparación interactiva del tamaño de territorios" loading="eager" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen"></iframe>
+        <div class="frame-help">Si la plataforma no aparece dentro del panel por una restricción del sitio externo, utilice <a href="https://truesize.net/" target="_blank" rel="noopener noreferrer">Abrir aparte</a>. Sus respuestas permanecerán guardadas aquí.</div>
+      </div>
+    </section>
+
+    <aside class="activity-panel" aria-labelledby="guideTitle">
+      <div class="activity-head">
+        <p class="eyebrow">Guía de exploración · 10 desafíos</p>
+        <h2 id="guideTitle">Observe antes de responder</h2>
+        <p>Realice cada comparación en TrueSize. No responda por intuición: mueva y superponga las siluetas.</p>
+        <div class="student-field">
+          <label for="studentName">Nombre y apellido</label>
+          <input id="studentName" type="text" autocomplete="name" placeholder="Ingrese su nombre">
+        </div>
+      </div>
+
+      <div class="challenge-shell" id="challengeShell">
+        <div class="challenge-meta">
+          <div class="challenge-number"><span class="number-badge" id="challengeNumber">1</span><span id="challengeLabel">Desafío 1 de 10</span></div>
+          <span class="answer-state" id="answerState">Sin responder</span>
+        </div>
+        <div class="action-box" id="actionBox"></div>
+        <form id="challengeForm">
+          <fieldset>
+            <legend id="questionText"></legend>
+            <div class="options" id="options"></div>
+          </fieldset>
+        </form>
+        <div class="nav-actions">
+          <button class="btn btn-secondary" id="prevBtn" type="button">Anterior</button>
+          <button class="btn btn-primary" id="nextBtn" type="button">Siguiente</button>
+        </div>
+      </div>
+
+      <nav class="dot-nav" id="dotNav" aria-label="Navegación entre desafíos"></nav>
+
+      <section class="results" id="results" aria-live="polite">
+        <div class="score-card">
+          <div class="score-ring" id="scoreRing">0/10</div>
+          <div>
+            <h3 id="scoreTitle">Resultado</h3>
+            <p id="scoreMessage"></p>
+          </div>
+        </div>
+        <div class="review-list" id="reviewList"></div>
+        <div class="result-actions">
+          <button class="btn btn-secondary" id="reviewBtn" type="button">Revisar respuestas</button>
+          <button class="btn btn-finish" id="resetBtn" type="button">Reiniciar actividad</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const challenges = [
+      {
+        action:'Busque <strong>Argentina</strong> y <strong>Greenland</strong>. Arrastre Argentina hasta Groenlandia y superponga ambas siluetas.',
+        question:'¿Cuál de los dos territorios posee mayor superficie?',
+        options:['Groenlandia','Argentina','Poseen prácticamente la misma superficie'],
+        answer:1,
+        explanation:'Argentina posee una superficie mayor que Groenlandia, aunque Mercator sobredimensiona visualmente a esta última.'
+      },
+      {
+        action:'Busque <strong>Africa</strong> y <strong>Greenland</strong>. Coloque Groenlandia sobre el continente africano.',
+        question:'¿Qué resultado muestra la superposición?',
+        options:['Groenlandia es mayor','Ambas superficies son equivalentes','África es mucho mayor'],
+        answer:2,
+        explanation:'África es más de catorce veces mayor; su aparente semejanza en algunos planisferios se debe a la distorsión.'
+      },
+      {
+        action:'Compare <strong>Brazil</strong> y <strong>Australia</strong> ubicándolos sobre una latitud semejante.',
+        question:'¿Cuál posee una superficie ligeramente mayor?',
+        options:['Brasil','Australia','Son exactamente iguales'],
+        answer:0,
+        explanation:'Brasil posee una superficie ligeramente superior a la de Australia.'
+      },
+      {
+        action:'Seleccione <strong>India</strong> y <strong>Argentina</strong>. Superponga ambas siluetas y gírelas si resulta necesario.',
+        question:'¿Cuál es el territorio de mayor superficie?',
+        options:['Argentina','India','No es posible compararlos'],
+        answer:1,
+        explanation:'India es mayor que Argentina, aunque la diferencia resulta menor de lo que suele sugerir el mapa.'
+      },
+      {
+        action:'Busque <strong>Russia</strong> y <strong>Africa</strong>. Traslade Rusia hacia el centro del continente africano.',
+        question:'¿Cuál ocupa la mayor superficie?',
+        options:['Rusia','África','Tienen una superficie equivalente'],
+        answer:1,
+        explanation:'África es considerablemente mayor que Rusia; las altas latitudes exageran la representación rusa en Mercator.'
+      },
+      {
+        action:'Compare <strong>Australia</strong> e <strong>India</strong> mediante superposición directa.',
+        question:'¿Qué relación se observa entre sus superficies?',
+        options:['India es más del doble de Australia','Australia es más del doble de India','La diferencia es inferior al 10 %'],
+        answer:1,
+        explanation:'Australia posee más del doble de la superficie de India.'
+      },
+      {
+        action:'Seleccione <strong>Canada</strong> y <strong>Brazil</strong>. Mueva Canadá hacia la latitud de Brasil.',
+        question:'¿Cuál conserva la mayor superficie?',
+        options:['Canadá','Brasil','Son exactamente iguales'],
+        answer:0,
+        explanation:'Canadá es mayor, pero al trasladarlo hacia latitudes bajas pierde la exageración visual que presenta en Mercator.'
+      },
+      {
+        action:'Compare <strong>Democratic Republic of the Congo</strong> con <strong>Greenland</strong>. Superponga las siluetas.',
+        question:'¿Cuál resulta ligeramente mayor?',
+        options:['Groenlandia','República Democrática del Congo','Son idénticas'],
+        answer:1,
+        explanation:'La República Democrática del Congo es ligeramente mayor que Groenlandia.'
+      },
+      {
+        action:'Busque <strong>Argentina</strong> y <strong>Kazakhstan</strong>. Gire una silueta manteniendo presionada la tecla R mientras arrastra.',
+        question:'¿Qué comparación se aproxima mejor al resultado?',
+        options:['Argentina es ligeramente mayor','Kazajistán es mucho mayor','Argentina tiene aproximadamente la mitad'],
+        answer:0,
+        explanation:'Sus superficies son similares, pero Argentina resulta ligeramente mayor.'
+      },
+      {
+        action:'En el modo <strong>Mapa</strong>, arrastre Groenlandia desde su posición original hacia el ecuador. Luego alterne con el modo <strong>Globo</strong>.',
+        question:'¿Cuál es la interpretación correcta de lo observado?',
+        options:['Groenlandia pierde superficie real al desplazarse','Su superficie real no cambia; cambia la deformación producida por la proyección','Mercator mantiene las áreas iguales en todas las latitudes'],
+        answer:1,
+        explanation:'El territorio no cambia: Mercator exagera progresivamente las superficies al alejarse del ecuador.'
+      }
+    ];
+
+    const STORAGE_KEY='mercator-iifa-dashboard-v1';
+    let current=0;
+    let answers=Array(challenges.length).fill(null);
+    let student='';
+
+    const $=id=>document.getElementById(id);
+    const progressText=$('progressText');
+    const progressFill=$('progressFill');
+    const challengeNumber=$('challengeNumber');
+    const challengeLabel=$('challengeLabel');
+    const answerState=$('answerState');
+    const actionBox=$('actionBox');
+    const questionText=$('questionText');
+    const options=$('options');
+    const prevBtn=$('prevBtn');
+    const nextBtn=$('nextBtn');
+    const dotNav=$('dotNav');
+    const challengeShell=$('challengeShell');
+    const results=$('results');
+    const studentName=$('studentName');
+
+    function saveState(){
+      localStorage.setItem(STORAGE_KEY,JSON.stringify({current,answers,student:studentName.value}));
+    }
+
+    function loadState(){
+      try{
+        const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if(!saved) return;
+        if(Array.isArray(saved.answers)&&saved.answers.length===challenges.length) answers=saved.answers;
+        if(Number.isInteger(saved.current)&&saved.current>=0&&saved.current<challenges.length) current=saved.current;
+        if(typeof saved.student==='string') studentName.value=saved.student;
+      }catch(error){ localStorage.removeItem(STORAGE_KEY); }
+    }
+
+    function answeredCount(){ return answers.filter(value=>value!==null).length; }
+
+    function renderProgress(){
+      const count=answeredCount();
+      progressText.textContent=`${count} de ${challenges.length}`;
+      progressFill.style.width=`${count/challenges.length*100}%`;
+    }
+
+    function renderDots(){
+      dotNav.innerHTML='';
+      challenges.forEach((_,index)=>{
+        const button=document.createElement('button');
+        button.type='button';
+        button.className='dot'+(index===current?' current':'')+(answers[index]!==null?' answered':'');
+        button.textContent=index+1;
+        button.setAttribute('aria-label',`Ir al desafío ${index+1}${answers[index]!==null?', respondido':''}`);
+        button.addEventListener('click',()=>{ current=index; renderChallenge(); });
+        dotNav.appendChild(button);
+      });
+    }
+
+    function renderChallenge(){
+      const item=challenges[current];
+      challengeNumber.textContent=current+1;
+      challengeLabel.textContent=`Desafío ${current+1} de ${challenges.length}`;
+      answerState.textContent=answers[current]===null?'Sin responder':'Respuesta registrada';
+      actionBox.innerHTML=`<strong>Acción:</strong> ${item.action}`;
+      questionText.textContent=item.question;
+      options.innerHTML='';
+      item.options.forEach((label,index)=>{
+        const option=document.createElement('label');
+        option.className='option';
+        option.innerHTML=`<input type="radio" name="answer" value="${index}" ${answers[current]===index?'checked':''}><span>${label}</span>`;
+        option.querySelector('input').addEventListener('change',()=>{
+          answers[current]=index;
+          answerState.textContent='Respuesta registrada';
+          saveState(); renderProgress(); renderDots();
+        });
+        options.appendChild(option);
+      });
+      prevBtn.disabled=current===0;
+      if(current===challenges.length-1){
+        nextBtn.textContent='Finalizar y corregir';
+        nextBtn.className='btn btn-finish';
+      }else{
+        nextBtn.textContent='Siguiente';
+        nextBtn.className='btn btn-primary';
+      }
+      renderProgress(); renderDots(); saveState();
+      questionText.focus?.();
+    }
+
+    function showResults(){
+      const missing=answers.findIndex(value=>value===null);
+      if(missing!==-1){
+        current=missing; renderChallenge();
+        answerState.textContent='Complete esta respuesta para finalizar';
+        options.firstElementChild?.scrollIntoView({behavior:'smooth',block:'center'});
+        return;
+      }
+      const score=answers.reduce((sum,value,index)=>sum+(value===challenges[index].answer?1:0),0);
+      $('scoreRing').textContent=`${score}/10`;
+      $('scoreTitle').textContent=score>=8?'Muy buen análisis':score>=6?'Buen avance':'Conviene repetir algunas comparaciones';
+      const name=studentName.value.trim();
+      $('scoreMessage').textContent=`${name?name+', ':''}obtuviste ${score} respuestas correctas. Revise cada explicación y vuelva a la plataforma cuando sea necesario.`;
+      $('reviewList').innerHTML=challenges.map((item,index)=>{
+        const ok=answers[index]===item.answer;
+        return `<article class="review-item ${ok?'ok':'bad'}"><b>${index+1}. ${ok?'Correcta':'A revisar'}</b><span>${item.explanation}</span></article>`;
+      }).join('');
+      challengeShell.classList.add('hide');
+      dotNav.classList.add('hide');
+      results.classList.add('show');
+      results.scrollTop=0;
+      saveState();
+    }
+
+    prevBtn.addEventListener('click',()=>{ if(current>0){current--;renderChallenge();} });
+    nextBtn.addEventListener('click',()=>{
+      if(current<challenges.length-1){ current++; renderChallenge(); }
+      else showResults();
+    });
+    $('reviewBtn').addEventListener('click',()=>{
+      results.classList.remove('show'); challengeShell.classList.remove('hide'); dotNav.classList.remove('hide'); renderChallenge();
+    });
+    $('resetBtn').addEventListener('click',()=>{
+      if(!confirm('¿Desea borrar todas las respuestas y comenzar nuevamente?')) return;
+      answers=Array(challenges.length).fill(null); current=0; localStorage.removeItem(STORAGE_KEY);
+      results.classList.remove('show'); challengeShell.classList.remove('hide'); dotNav.classList.remove('hide'); renderChallenge();
+    });
+    studentName.addEventListener('input',saveState);
+    document.addEventListener('keydown',event=>{
+      if(event.altKey&&event.key==='ArrowRight'&&current<challenges.length-1){current++;renderChallenge();}
+      if(event.altKey&&event.key==='ArrowLeft'&&current>0){current--;renderChallenge();}
+    });
+
+    function registerAgentTools(){
+      const context=document.modelContext;
+      if(!context?.registerTool) return;
+      const safeRegister=tool=>{
+        try{ Promise.resolve(context.registerTool(tool)).catch(()=>{}); }catch(error){}
+      };
+      safeRegister({
+        name:'read_activity_state',
+        title:'Consultar progreso',
+        description:'Consulta el desafío visible y cuántas respuestas fueron registradas en La trampa de Mercator.',
+        inputSchema:{type:'object',properties:{},additionalProperties:false},
+        annotations:{readOnlyHint:true,untrustedContentHint:false},
+        execute(){
+          return {currentChallenge:current+1,totalChallenges:challenges.length,answered:answeredCount(),showingResults:results.classList.contains('show')};
+        }
+      });
+      safeRegister({
+        name:'navigate_to_challenge',
+        title:'Ir a un desafío',
+        description:'Muestra uno de los diez desafíos de comparación cartográfica.',
+        inputSchema:{type:'object',properties:{challenge:{type:'integer',minimum:1,maximum:10}},required:['challenge'],additionalProperties:false},
+        annotations:{readOnlyHint:false,untrustedContentHint:false},
+        execute(input){
+          if(!Number.isInteger(input?.challenge)||input.challenge<1||input.challenge>challenges.length) throw new Error('El desafío debe ser un entero entre 1 y 10.');
+          current=input.challenge-1;
+          results.classList.remove('show'); challengeShell.classList.remove('hide'); dotNav.classList.remove('hide');
+          renderChallenge();
+          return {currentChallenge:current+1,question:challenges[current].question};
+        }
+      });
+      safeRegister({
+        name:'record_challenge_answer',
+        title:'Registrar respuesta',
+        description:'Registra una opción para un desafío y actualiza el mismo progreso que muestra la interfaz.',
+        inputSchema:{type:'object',properties:{challenge:{type:'integer',minimum:1,maximum:10},option:{type:'integer',minimum:1,maximum:3}},required:['challenge','option'],additionalProperties:false},
+        annotations:{readOnlyHint:false,untrustedContentHint:false},
+        execute(input){
+          if(!Number.isInteger(input?.challenge)||input.challenge<1||input.challenge>challenges.length) throw new Error('El desafío debe ser un entero entre 1 y 10.');
+          if(!Number.isInteger(input?.option)||input.option<1||input.option>3) throw new Error('La opción debe ser un entero entre 1 y 3.');
+          current=input.challenge-1; answers[current]=input.option-1;
+          results.classList.remove('show'); challengeShell.classList.remove('hide'); dotNav.classList.remove('hide');
+          renderChallenge();
+          return {challenge:input.challenge,selectedOption:input.option,answered:answeredCount()};
+        }
+      });
+    }
+
+    loadState(); renderChallenge(); registerAgentTools();
+  </script>
+</body>
+</html>
